@@ -1,0 +1,101 @@
+/******************************* Footer File Code *************************************************************************/
+
+<form id="myForm" onsubmit="return myFunction()" enctype="multipart/form-data">
+  Enter First Name: <input type="text" name="fname">
+  Enter Last Name:  <input type="text" name="lname">
+  Enter Phone:  	<input type="text" name="phone">
+  Enter file: <input type="file" name="files[]" id="files" multiple>
+  <input type="submit" value="Submit">
+</form>
+
+<script>
+	function myFunction()
+	{
+		var ajaxurl = "<?php echo esc_url(admin_url('admin-ajax.php')); ?>";
+		
+		var form_data = new FormData(jQuery('form')[0]);
+		var file = jQuery(document).find('input[type="file"]');
+		var postData = new FormData(jQuery('form')[0]);
+
+		postData.append("fdata", jQuery("#myForm").serialize()); // usual input
+
+		//postData.append("File", jQuery("input[name=file[]]")[0].files[0]); // file
+
+		var totalfiles = document.getElementById('files').files.length;
+		
+		if(totalfiles > 3)
+		{
+			alert("Only 3 images are allowed to be upload.");
+			return false;
+		}
+		
+		var i = 1;
+		for (var index = 0; index < totalfiles; index++) 
+		{
+		    if(i <= 3)
+			{
+				postData.append("files[]", document.getElementById('files').files[index]);
+			}
+		}
+
+		postData.append('action', 'my_action');
+
+		jQuery.ajax({
+			type: 'POST',
+			url: ajaxurl,
+			data: postData,
+			dataType:'json',
+			contentType: false,
+			processData: false,
+			success: function(response)
+			{
+				console.log(response);
+				return false;
+			}
+		});
+	}
+	</script>
+
+/**************************************************************************************************************************/
+
+/************************************* Functions File Code ****************************************************************/
+
+add_action('wp_ajax_my_action', 'my_action_callback');
+add_action('wp_ajax_nopriv_my_action', 'my_action_callback');
+
+function my_action_callback() {
+    global $wpdb; // this is how you get access to the database
+	///print_r($_FILES);
+	//echo '-----------------------------------------------------------'.'<br>';
+	//print_r($_POST['fdata']);
+	
+	$countfiles = count($_FILES['files']['name']);
+
+	
+	if ( ! function_exists( 'wp_handle_upload' ) ) {
+        require_once( ABSPATH . 'wp-admin/includes/file.php' );
+    }
+    $upload_overrides = array( 'test_form' => false );
+	
+	$files = $_FILES['files'];
+    foreach ($files['name'] as $key => $value) {
+      if ($files['name'][$key]) 
+	  {
+        $uploadedfile = array(
+            'name'     => $files['name'][$key],
+            'type'     => $files['type'][$key],
+            'tmp_name' => $files['tmp_name'][$key],
+            'error'    => $files['error'][$key],
+            'size'     => $files['size'][$key]
+        );
+        $movefile = wp_handle_upload( $uploadedfile, $upload_overrides );
+	  }
+	}	
+	$response = array(
+		"message" => "Success"
+	);
+	echo json_encode($response);
+    die(); // this is required to return a proper result
+}
+
+/********************************************************************************************************************************************/
